@@ -5,22 +5,21 @@ import hre from "hardhat";
 describe("Token Creation", function() {
     async function deploymentOfContract() {
         const tokenFactory = await hre.ethers.getContractFactory("TokenMint"); 
-        const [ owner, curveWallet, reserveWallet, liquidityWallet ] = await hre.ethers.getSigners();
+        const [ owner, reserveWallet, liquidityWallet ] = await hre.ethers.getSigners();
 
         // const curveWallet = hre.ethers.Wallet.createRandom();
         // const reserveWallet = hre.ethers.Wallet.createRandom();
         // const liquidityWallet = hre.ethers.Wallet.createRandom();
 
-        const token = await tokenFactory.deploy("Raygun", "RAY", reserveWallet.address, curveWallet.address, liquidityWallet.address);
+        const token = await tokenFactory.deploy("Raygun", "RAY", reserveWallet.address,  liquidityWallet.address);
 
-        return { token, curveWallet, reserveWallet, liquidityWallet, owner }
+        return { token,  reserveWallet, liquidityWallet, owner }
     };
 
     it("Should Caluculate the price correctly", async function() {
-        const { token, curveWallet, reserveWallet, liquidityWallet, owner } = await deploymentOfContract();
-        const price = token.calulatePrice(100);
-        console.log("price", price)
-        
+        const { token,  reserveWallet, liquidityWallet, owner } = await deploymentOfContract();
+        const ether = hre.ethers.parseEther("0.005")
+        await token.calculateContinuousMintReturn(ether);        
     });
 
     // it("Should buy 100 raygun tokens", async function() {

@@ -3,74 +3,43 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
+import "./BancorFormula.sol";
 
-
-
-contract TokenMint is ERC20 {
+contract TokenMint is ERC20, BancorBondingCurve {
     bool public liquidityCreated = false;
     bool public supplySold = false;
     address public reserveAccount;
-    address public curveAccount;
     address public liquidityAccount;
-    uint256 public constant INITITAL_PRICE = 0.01 ether; 
-    uint256 public constant PRICE_SLOPE = 0.001 ether;
+    uint256 constant public DECIMALS = 10**18;
+    uint256 constant public INITIAL_MINT = (2 * 10 ** 8) * DECIMALS;
+    uint constant public fundingGoal = 5 ether;
+    uint32 public reserveRatio = 10;
 
-    constructor(string memory name, string memory symbol, address _reserveAccount, address _curveAccount, address _liquidityAccount) ERC20(name, symbol) {
+
+    constructor(string memory name, string memory symbol, address _reserveAccount, address _liquidityAccount) ERC20(name, symbol) {
         console.log("Constructor called with parameters:");
         console.log("_reserveAccount:", _reserveAccount);
-        console.log("_curveAccount:", _curveAccount);
         console.log("_liquidityAccount:", _liquidityAccount);
 
         console.log("Minting tokens...");
-        _mint(_reserveAccount, 20000000 * 10 ** decimals());
-        _mint(_curveAccount, 80000000 * 10 ** decimals());
+        _mint(_reserveAccount, INITIAL_MINT);
 
         reserveAccount = _reserveAccount;
-        curveAccount = _curveAccount;
         liquidityAccount = _liquidityAccount;
 
         console.log("Minting complete. Checking balances:");
-        console.log("Curve Account Balance", balanceOf(curveAccount));
         console.log("Reserve Account Balance", balanceOf(reserveAccount));
-        console.log("Total Supply:", totalSupply());
-    }
-    //fix this 
-    function calulatePrice(uint256 amount) public view returns(uint256) {
-        uint256 currentSupply = balanceOf(curveAccount);
-        console.log("Current Curve Account Supply", currentSupply);
-        uint256 pricePerToken = INITITAL_PRICE + (currentSupply / 1 ether) * PRICE_SLOPE;
-        console.log("Price Per Token", pricePerToken);
-        console.log("Total Cost", pricePerToken * amount);
-        return pricePerToken * amount;
     }
 
-    function buy(uint amount) public payable {
-        if (balanceOf(curveAccount) == 0 && !liquidityCreated) {
-            supplySold = true;
-            //add liquidity
-        } else {
-            require(balanceOf(curveAccount) >= amount, "Not enough supply");
-            uint256 totalCost = calulatePrice(amount);
-            console.log(totalCost);
-            require(msg.value >= totalCost, "Not Enough BNB");
-            (bool success, ) = liquidityAccount.call{value: msg.value}("");
-            require(success, "Transfer to reserve account failed");
-            _transfer(curveAccount, msg.sender, amount); 
-            if (balanceOf(curveAccount) == 0) {
-                supplySold = true;
-                //add liquidty
-            }
-        }
-    }
+    function calculateContinuousMintReturn(uint256 _amount)
+        public view returns (uint256)
+    {
+        console.log("amount", _amount);
+        console.log("Total Supply", totalSupply());
+        uint256 mintAmount = calculatePurchaseReturn(totalSupply(), balanceOf(reserveAccount), uint32(reserveRatio), _amount);
+        console.log("Mint Amount",mintAmount);
+        return mintAmount;
 
-    function sell(uint amount) public {
-        require(supplySold == false, "Supply has aldready been sold");
-        uint256 sellPrice = calulatePrice(amount);
-        console.log(sellPrice);
-        _transfer(msg.sender, curveAccount, sellPrice);
-        (bool success, ) = payable(msg.sender).call{value: sellPrice}("");
-        require(success, "Transfer to seller failed");
     }
-
-    function createLiquidityPool() public {}
+ 
 }

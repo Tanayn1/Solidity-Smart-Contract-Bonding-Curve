@@ -7,11 +7,8 @@ describe("Token Creation", function() {
         const tokenFactory = await hre.ethers.getContractFactory("TokenMint"); 
         const [ owner, reserveWallet, liquidityWallet ] = await hre.ethers.getSigners();
 
-        // const curveWallet = hre.ethers.Wallet.createRandom();
-        // const reserveWallet = hre.ethers.Wallet.createRandom();
-        // const liquidityWallet = hre.ethers.Wallet.createRandom();
-
-        const token = await tokenFactory.deploy("Raygun", "RAY", reserveWallet.address,  liquidityWallet.address);
+        const etherAmount = hre.ethers.parseEther("0.00001"); // 0.00001 Ether
+        const token = await tokenFactory.deploy("Raygun", "RAY", reserveWallet.address, {value: etherAmount});
 
         return { token,  reserveWallet, liquidityWallet, owner }
     };
@@ -19,7 +16,8 @@ describe("Token Creation", function() {
     it("Should Caluculate the price correctly", async function() {
         const { token,  reserveWallet, liquidityWallet, owner } = await deploymentOfContract();
         const ether = hre.ethers.parseEther("0.005")
-        await token.calculateContinuousMintReturn(ether);        
+        await token.buy({value: ether});
+        await token.sell(3);        
     });
 
     // it("Should buy 100 raygun tokens", async function() {
